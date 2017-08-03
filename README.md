@@ -17,6 +17,8 @@ Usage
 
 Using gotoearth is fairly simple, too. There is an example provided in the repository from which you can take guidance.
 
+### Running code in the same invocation (local) ###
+
 The general idea is to take a downtoearth event, and route it to delegate methods. For example, somebody makes a `GET` request at `/foo/{fooID}`, and you would like to route this to handler in the same project. To do you so, you would need the following in your root handler.
 
 ``` go
@@ -45,7 +47,9 @@ func (Handler) Handle(evt interface{}) (interface{}, error) {
 }
 ```
 
-Alternatively, you could have the root handler delegate by invoking another Lambda with the same event. Let's assume you have another `GET` request at `/bar/{barID}`, and you want it to invoke another AWS Lambda. In that case, you would need the following.
+### Invoke another Lambda ###
+
+Alternatively, you could have the root handler delegate by invoking another Lambda with the same event. Let's assume you have another `GET` request at `/bar/{barID}`, and you want it to invoke another AWS Lambda. In that case, you could do the following.
 
 ``` go
 func Handle(evt gotoearth.Event, ctx *runtime.Context) (interface{}, error) {
@@ -60,3 +64,15 @@ func Handle(evt gotoearth.Event, ctx *runtime.Context) (interface{}, error) {
 ```
 
 Then, in the invoked AWS Lambda, you just gotoearth.Event as the type for the event again.
+
+_Even better yet_: gotoearth also provides the type SimpleLambda. This makes a few assumptions which make usage even easier. Since invoking a Lambda as Request / Response would be similar to just making the library call in this code, gotoearth assumes that if you are invoking another Lambda, you probably want the InvocationType to be "Event". We also just assume you are passing along the same payload and accepting all of lambda.InvokeInput defaults. Therefore, you can just give the initialization of the type a value (string not *string) for FunctionName, which could be just the function name of or a full ARN.
+
+``` go
+func Handle(evt gotoearth.Event, ctx *runtime.Context) (interface{}, error) {
+	r := gotoearth.Router{Handlers: map[string]gotoearth.Handler{
+		"GET:/baz/{bazID}": gotoearth.SimpleLambda{"baz"},
+	}}
+	return r.Route(evt)
+```
+
+How neat is that?
