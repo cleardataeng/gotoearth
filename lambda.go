@@ -5,16 +5,30 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/lambda"
 )
 
-// LambdaHandler is a helper for event that need only to invoke another Lambda.
-type LambdaHandler struct {
+// Lambda is a helper for event that need only to invoke another Lambda.
+type Lambda struct {
 	// This is the InvokeInput object documented here:
 	// https://docs.aws.amazon.com/sdk-for-go/api/service/lambda/#InvokeInput
 	Input lambda.InvokeInput
+}
+
+// SimpleLambda is similar to Lamba but requires only an FunctionName.
+// It assumes that the InvocationType will be "Event". It will use the passalong
+// payload of the current Event. It will use default values for all other values
+// in the lambda.InvokeInput. In addition, you need only to pass in a string.
+// This will be converted to aws.String for you.
+type SimpleLambda struct {
+	// This is the name of the function or the full ARN. It is a direct
+	// passthrough to the lambda.InvokeInput.FunctionName. You can view that
+	// documentation at: https://docs.aws.amazon.com/sdk-for-go/api/service/lambda/#InvokeInput.
+	// The only different is that this field is a string, not *string.
+	FunctionName string
 }
 
 func getSession() *session.Session {
@@ -23,23 +37,9 @@ func getSession() *session.Session {
 	}))
 }
 
-// Handle is the method which causes LambdaHandler to satisfy the Handler
-// interface. Be sure to set the lambda.InvokeInput on LambdaHandler. There is
-// likely no reason to provide the Payload in lambda.InvokeInput. If you do, it
-// will be used. If you do not, the gotoearth.Event will be passed along.
-func (h LambdaHandler) Handle(evt interface{}) (interface{}, error) {
-	if h.Input.FunctionName == nil {
-		return "", errors.New("no lambda.InvokeInput.FunctionName given")
-	}
+func invoke(input lambda.InvokeInput) (interface{}, error) {
 	svc := lambda.New(getSession())
-	if h.Input.Payload == nil {
-		payload, err := json.Marshal(evt)
-		if err != nil {
-			return "", fmt.Errorf("evt failed to marshal: %s", err.Error())
-		}
-		h.Input.Payload = payload
-	}
-	result, err := svc.Invoke(&h.Input)
+	result, err := svc.Invoke(&input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -90,4 +90,41 @@ func (h LambdaHandler) Handle(evt interface{}) (interface{}, error) {
 		return "", err
 	}
 	return result, nil
+}
+
+// Handle is the method which causes Lambda to satisfy the Handler interface.
+// Be sure to set Input (lambda.InvokeInput). There is likely no reason to
+// provide the Payload in Input. If you do, it will be used. If you do not, the
+// gotoearth.Event will be passed along.
+func (l Lambda) Handle(evt interface{}) (interface{}, error) {
+	if l.Input.FunctionName == nil {
+		return "", errors.New("no lambda.InvokeInput.FunctionName given")
+	}
+	if l.Input.Payload == nil {
+		payload, err := json.Marshal(evt)
+		if err != nil {
+			return "", fmt.Errorf("evt failed to marshal: %s", err.Error())
+		}
+		l.Input.Payload = payload
+	}
+	return invoke(l.Input)
+}
+
+// Handle is the method which causes SimpleHandler to satisfy the Handler
+// interface. The only difference is this makes assumptions and therefore
+// makes usage easier.
+func (l SimpleLambda) Handle(evt interface{}) (interface{}, error) {
+	if l.FunctionName == "" {
+		return "", errors.New("no FunctionName given")
+	}
+	payload, err := json.Marshal(evt)
+	if err != nil {
+		return "", fmt.Errorf("evt failed to marshal: %s", err.Error())
+	}
+	input := lambda.InvokeInput{
+		FunctionName:   aws.String(l.FunctionName),
+		InvocationType: aws.String("Event"),
+		Payload:        payload,
+	}
+	return invoke(input)
 }
