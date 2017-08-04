@@ -1,5 +1,7 @@
 package gotoearth
 
+import "fmt"
+
 // Event is a downtoearth event.
 type Event struct {
 	Body        map[string]interface{} `json:"body"`
@@ -22,7 +24,10 @@ type Router struct {
 
 // Route the event to the correct delegate method.
 func (r Router) Route(evt Event) (interface{}, error) {
-	return r.Handlers[evt.Route].Handle(evt)
+	if route, ok := r.Handlers[evt.Route]; ok {
+		return route.Handle(evt)
+	}
+	return "", fmt.Errorf("%s: no matching route", evt.Route)
 }
 
 // SetHandler adds a Handler to the Router.
