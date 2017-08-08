@@ -33,5 +33,8 @@ func (r Router) Route(evt Event) (interface{}, error) {
 // SetHandler adds a Handler to the Router.
 // This is probably superfluous. However, there may be need for fancy controls.
 func (r *Router) SetHandler(route string, handler Handler) {
+	if r.Handlers == nil {
+		r.Handlers = map[string]Handler{}
+	}
 	r.Handlers[route] = handler
 }
