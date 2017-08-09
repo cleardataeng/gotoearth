@@ -37,57 +37,57 @@ func getSession() *session.Session {
 	}))
 }
 
-func invoke(input lambda.InvokeInput) (interface{}, error) {
+func invoke(input lambda.InvokeInput) (*lambda.InvokeOutput, error) {
 	svc := lambda.New(getSession())
 	result, err := svc.Invoke(&input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case lambda.ErrCodeServiceException:
-				return "", fmt.Errorf(lambda.ErrCodeServiceException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeServiceException, aerr.Error())
 			case lambda.ErrCodeResourceNotFoundException:
-				return "", fmt.Errorf(lambda.ErrCodeResourceNotFoundException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeResourceNotFoundException, aerr.Error())
 			case lambda.ErrCodeInvalidRequestContentException:
-				return "", fmt.Errorf(lambda.ErrCodeInvalidRequestContentException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeInvalidRequestContentException, aerr.Error())
 			case lambda.ErrCodeRequestTooLargeException:
-				return "", fmt.Errorf(lambda.ErrCodeRequestTooLargeException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeRequestTooLargeException, aerr.Error())
 			case lambda.ErrCodeUnsupportedMediaTypeException:
-				return "", fmt.Errorf(lambda.ErrCodeUnsupportedMediaTypeException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeUnsupportedMediaTypeException, aerr.Error())
 			case lambda.ErrCodeTooManyRequestsException:
-				return "", fmt.Errorf(lambda.ErrCodeTooManyRequestsException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeTooManyRequestsException, aerr.Error())
 			case lambda.ErrCodeInvalidParameterValueException:
-				return "", fmt.Errorf(lambda.ErrCodeInvalidParameterValueException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeInvalidParameterValueException, aerr.Error())
 			case lambda.ErrCodeEC2UnexpectedException:
-				return "", fmt.Errorf(lambda.ErrCodeEC2UnexpectedException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeEC2UnexpectedException, aerr.Error())
 			case lambda.ErrCodeSubnetIPAddressLimitReachedException:
-				return "", fmt.Errorf(lambda.ErrCodeSubnetIPAddressLimitReachedException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeSubnetIPAddressLimitReachedException, aerr.Error())
 			case lambda.ErrCodeENILimitReachedException:
-				return "", fmt.Errorf(lambda.ErrCodeENILimitReachedException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeENILimitReachedException, aerr.Error())
 			case lambda.ErrCodeEC2ThrottledException:
-				return "", fmt.Errorf(lambda.ErrCodeEC2ThrottledException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeEC2ThrottledException, aerr.Error())
 			case lambda.ErrCodeEC2AccessDeniedException:
-				return "", fmt.Errorf(lambda.ErrCodeEC2AccessDeniedException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeEC2AccessDeniedException, aerr.Error())
 			case lambda.ErrCodeInvalidSubnetIDException:
-				return "", fmt.Errorf(lambda.ErrCodeInvalidSubnetIDException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeInvalidSubnetIDException, aerr.Error())
 			case lambda.ErrCodeInvalidSecurityGroupIDException:
-				return "", fmt.Errorf(lambda.ErrCodeInvalidSecurityGroupIDException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeInvalidSecurityGroupIDException, aerr.Error())
 			case lambda.ErrCodeInvalidZipFileException:
-				return "", fmt.Errorf(lambda.ErrCodeInvalidZipFileException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeInvalidZipFileException, aerr.Error())
 			case lambda.ErrCodeKMSDisabledException:
-				return "", fmt.Errorf(lambda.ErrCodeKMSDisabledException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeKMSDisabledException, aerr.Error())
 			case lambda.ErrCodeKMSInvalidStateException:
-				return "", fmt.Errorf(lambda.ErrCodeKMSInvalidStateException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeKMSInvalidStateException, aerr.Error())
 			case lambda.ErrCodeKMSAccessDeniedException:
-				return "", fmt.Errorf(lambda.ErrCodeKMSAccessDeniedException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeKMSAccessDeniedException, aerr.Error())
 			case lambda.ErrCodeKMSNotFoundException:
-				return "", fmt.Errorf(lambda.ErrCodeKMSNotFoundException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeKMSNotFoundException, aerr.Error())
 			case lambda.ErrCodeInvalidRuntimeException:
-				return "", fmt.Errorf(lambda.ErrCodeInvalidRuntimeException, aerr.Error())
+				return result, fmt.Errorf(lambda.ErrCodeInvalidRuntimeException, aerr.Error())
 			default:
-				return "", aerr
+				return result, aerr
 			}
 		}
-		return "", err
+		return result, err
 	}
 	return result, nil
 }
@@ -95,7 +95,7 @@ func invoke(input lambda.InvokeInput) (interface{}, error) {
 // Handle is the method which causes Lambda to satisfy the Handler interface.
 // Be sure to set Input (lambda.InvokeInput). There is likely no reason to
 // provide the Payload in Input. If you do, it will be used. If you do not, the
-// gotoearth.Event will be passed along.
+// given will be passed along.
 func (l Lambda) Handle(evt interface{}) (interface{}, error) {
 	if l.Input.FunctionName == nil {
 		return "", errors.New("no lambda.InvokeInput.FunctionName given")
@@ -107,7 +107,13 @@ func (l Lambda) Handle(evt interface{}) (interface{}, error) {
 		}
 		l.Input.Payload = payload
 	}
-	return invoke(l.Input)
+	if l.Input.InvocationType != nil {
+		return invoke(l.Input)
+	} else {
+		r, err := invoke(l.Input)
+		data := (*json.RawMessage)(&r.Payload)
+		return data, err
+	}
 }
 
 // Handle is the method which causes SimpleHandler to satisfy the Handler
