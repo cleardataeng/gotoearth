@@ -1,6 +1,9 @@
 package gotoearth
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Event is a downtoearth event.
 type Event struct {
@@ -20,6 +23,20 @@ type Router struct {
 	// Handlers are types that satisfy the Handler interface.
 	// This is public so you can set it directly rather than using SetHandler.
 	Handlers map[string]Handler
+}
+
+// RouteParts returns the HTTP verb and route path for the Event.
+func RouteParts(r string) map[string]string {
+	parts := strings.SplitN(r, ":", 2)
+	return map[string]string{
+		"verb": parts[0],
+		"path": parts[1],
+	}
+}
+
+// Parts returns the HTTP verb and route path for the Event.
+func (e Event) Parts() map[string]string {
+	return RouteParts(e.Route)
 }
 
 // Route routes the given event to the correct delegate method based upon route.
