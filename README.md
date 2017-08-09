@@ -54,7 +54,7 @@ Alternatively, you could have the root handler delegate by invoking another Lamb
 ``` go
 func Handle(evt gotoearth.Event, ctx *runtime.Context) (interface{}, error) {
 	r := gotoearth.Router{Handlers: map[string]gotoearth.Handler{
-		"GET:/bar/{barID}": gotoearth.LambdaHandler{lambda.InvokeInput{
+		"GET:/bar/{barID}": gotoearth.Lambda{lambda.InvokeInput{
 			FunctionName:   aws.String("arn:aws:lambda:us-west-2:1234567890:function:bar"),
 			InvocationType: aws.String("Event"),
 		}},
