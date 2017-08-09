@@ -22,8 +22,17 @@ type Router struct {
 	Handlers map[string]Handler
 }
 
-// Route the event to the correct delegate method.
-func (r Router) Route(evt Event) (interface{}, error) {
+// Route routes the given event to the correct delegate method based upon route.
+func (r Router) Route(route string, evt interface{}) (interface{}, error) {
+	if route, ok := r.Handlers[route]; ok {
+		return route.Handle(evt)
+	}
+	return "", fmt.Errorf("%s: no matching route", route)
+}
+
+// SimpleRoute routes the event to the correct delegate method.
+// This will expect a gotoearth.Event and pass it in full.
+func (r Router) SimpleRoute(evt Event) (interface{}, error) {
 	if route, ok := r.Handlers[evt.Route]; ok {
 		return route.Handle(evt)
 	}
