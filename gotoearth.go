@@ -11,6 +11,7 @@ type Event struct {
 	Path        map[string]string      `json:"path"`
 	Querystring map[string]string      `json:"querystring"`
 	Route       string                 `json:"route"`
+	Stage       string                 `json:"stage"`
 }
 
 // Handler is used to call a method delegate based on an event.
