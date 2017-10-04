@@ -76,3 +76,19 @@ func Handle(evt gotoearth.Event, ctx *runtime.Context) (interface{}, error) {
 ```
 
 How neat is that?
+
+### Errors ###
+
+When [downtoearth](https://github.com/cleardataeng/downtoearth) generates an API for API Gateway, the way that API detects and returns the correct error code, is by the text in the error message returned by the Lambda handler. `HTTPErr` is a helper to do just that. It is very easy to use.
+
+``` go
+	if len(cart.Items) == 0 {
+		return gotoearth.HTTPErr(404, errors.New("cart empty"))
+	}
+```
+
+In this contrived example, if you find a cart is empty, returning this would actually return an error with the message `[Not Found] cart empty`, which would trigger the API Gateway to respond with a 404 status.
+
+You can also pass in the constants defined in the net/http package that begin with "Status". For example, passing in http.StatusNotFound in the first argument would yield the same result as above.
+
+You can find the constants defined in the [net/http package](https://golang.org/pkg/net/http/#pkg-constants).
